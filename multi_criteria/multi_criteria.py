@@ -223,28 +223,69 @@ class MultiCriteria:
            
             if carregar:
                 self.listaLayersSelecionados.append(layer_selecionado)
-                #------ Creates the table
-                self.tabelaNotas = QTableWidget()
-                self.dlg.tableWidget.insertRow(row_number)
-                self.dlg.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(nomeRaster)))
-                self.dlg.tabWidget.addTab(self.tabelaNotas,nomeRaster)
-                self.tabelaNotas.insertColumn(0)
-                self.tabelaNotas.setHorizontalHeaderItem(0, QTableWidgetItem(QCoreApplication.translate("Tab title","Original Value")))
-                self.tabelaNotas.insertColumn(1)
-                self.tabelaNotas.setHorizontalHeaderItem(1, QTableWidgetItem(QCoreApplication.translate("Tab title","Grade")))
-                self.tabelaNotas.insertColumn(2)
-                self.tabelaNotas.setHorizontalHeaderItem(2, QTableWidgetItem(QCoreApplication.translate("Tab title","Disregard")))
+                self.listaAssert.append((rasterOpen.RasterXSize,rasterOpen.RasterYSize)) #(X,Y)
+                if len(self.listaLayersSelecionados) == 1:
+                    #------ Creates the table
+                    self.tabelaNotas = QTableWidget()
+                    self.dlg.tableWidget.insertRow(row_number)
+                    self.dlg.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(nomeRaster)))
+                    self.dlg.tabWidget.addTab(self.tabelaNotas,nomeRaster)
+                    self.tabelaNotas.insertColumn(0)
+                    self.tabelaNotas.setHorizontalHeaderItem(0, QTableWidgetItem(QCoreApplication.translate("Tab title","Original Value")))
+                    self.tabelaNotas.insertColumn(1)
+                    self.tabelaNotas.setHorizontalHeaderItem(1, QTableWidgetItem(QCoreApplication.translate("Tab title","Grade")))
+                    self.tabelaNotas.insertColumn(2)
+                    self.tabelaNotas.setHorizontalHeaderItem(2, QTableWidgetItem(QCoreApplication.translate("Tab title","Disregard")))
 
-                # ------ load the unique values of raster on table for user to give grades     
-                for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
-                    if elementoUnico != self.noData:
-                        self.desconsiderarCheckBox = QCheckBox(QCoreApplication.translate("Tab","Not Calculate"))
-                        self.tabelaNotas.insertRow(row_number) 
-                        self.tabelaNotas.setCellWidget(row_number,2,self.desconsiderarCheckBox)
-                        item = QTableWidgetItem(str(elementoUnico))
-                        flags = Qt.ItemIsEnabled  # set not editable 
-                        item.setFlags(flags)
-                        self.tabelaNotas.setItem(row_number, column_number, item)
+                    # ------ load the unique values of raster on table for user to give grades     
+                    for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
+                        if elementoUnico != self.noData:
+                            self.desconsiderarCheckBox = QCheckBox(QCoreApplication.translate("Tab","Not Calculate"))
+                            self.tabelaNotas.insertRow(row_number) 
+                            self.tabelaNotas.setCellWidget(row_number,2,self.desconsiderarCheckBox)
+                            item = QTableWidgetItem(str(elementoUnico))
+                            flags = Qt.ItemIsEnabled  # set not editable 
+                            item.setFlags(flags)
+                            self.tabelaNotas.setItem(row_number, column_number, item)
+
+                else:
+                    mensagem = "erro raster{}".format(str(len(self.listaAssert)))
+                    try:
+                        assert(self.listaAssert[0] == self.listaAssert[-1]), mensagem
+                    
+                        #------ Creates the table
+                        self.tabelaNotas = QTableWidget()
+                        self.dlg.tableWidget.insertRow(row_number)
+                        self.dlg.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(nomeRaster)))
+                        self.dlg.tabWidget.addTab(self.tabelaNotas,nomeRaster)
+                        self.tabelaNotas.insertColumn(0)
+                        self.tabelaNotas.setHorizontalHeaderItem(0, QTableWidgetItem(QCoreApplication.translate("Tab title","Original Value")))
+                        self.tabelaNotas.insertColumn(1)
+                        self.tabelaNotas.setHorizontalHeaderItem(1, QTableWidgetItem(QCoreApplication.translate("Tab title","Grade")))
+                        self.tabelaNotas.insertColumn(2)
+                        self.tabelaNotas.setHorizontalHeaderItem(2, QTableWidgetItem(QCoreApplication.translate("Tab title","Disregard")))
+
+                        # ------ load the unique values of raster on table for user to give grades     
+                        for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
+                            if elementoUnico != self.noData:
+                                self.desconsiderarCheckBox = QCheckBox(QCoreApplication.translate("Tab","Not Calculate"))
+                                self.tabelaNotas.insertRow(row_number) 
+                                self.tabelaNotas.setCellWidget(row_number,2,self.desconsiderarCheckBox)
+                                item = QTableWidgetItem(str(elementoUnico))
+                                flags = Qt.ItemIsEnabled  # set not editable 
+                                item.setFlags(flags)
+                                self.tabelaNotas.setItem(row_number, column_number, item) 
+                                                
+                    except:
+                        traduzir = QCoreApplication.translate('Message to user','The previous raster(s) has {} X cells and {} Y cells while this last raster \'{}\' has {} X cells and {} Y cells. They are not the same size. It will not be added to the Evaluation.')
+                        message = traduzir.format(str(self.listaAssert[0][0]),
+                                                str(self.listaAssert[0][1]),
+                                                str(nomeRaster),
+                                                str(self.listaAssert[-1][0]),
+                                                str(self.listaAssert[-1][1]))
+                        QMessageBox.warning(self.dlg,QCoreApplication.translate('Message to user','Missing Information'), message)
+                        self.listaLayersSelecionados.pop(-1)
+                        self.listaAssert.pop(-1)
 
         else:
             message = QCoreApplication.translate('Message to user','Select only rasters')
@@ -262,6 +303,7 @@ class MultiCriteria:
             self.dlg.tabWidget.removeTab(indexTab_remover)
             self.listaLayersSelecionados.pop(indexTab_remover)
             self.listaNoData.pop(indexTab_remover)
+            self.listaAssert.pop(indexTab_remover)
 
     def array2raster(self, rasterfn, newRasterfn, array):  #rasterfn: name and path to model raster 
         """Turns a array into a raster"""                  #newRasterfn: name and path to new raster
@@ -343,6 +385,7 @@ class MultiCriteria:
         self.dlg.mMapLayerComboBox.addItems(self.listaNomeRasters)
         # list of rasters to update the layer to take its path
         self.listaLayersSelecionados = [] #list of selected layers
+        self.listaAssert = [] #list to assert raster size
         self.dlg.addRasterButton.clicked.connect(self.select_input_raster)  #adds the raster name(and more)to the table
         self.dlg.removeRasterButton.clicked.connect(self.remove_input_raster)#removes the raster name(and more)from the table
         self.dlg.pushButton.clicked.connect(self.select_output_file)
