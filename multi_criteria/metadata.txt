@@ -6,8 +6,8 @@
 name=Weighted Multi-Criteria Analysis - WMCA
 qgisMinimumVersion=3.0
 description=Displays raster’s pixels values to the user, making possible to assign weights for each raster and grades for each class within each raster.
-version=0.1
-author=Carvalho Neto, R.M./ UFSM and Benedetti, A.C.P./ UFSM
+version=0.2
+author=Carvalho Neto, R.M. - UFSM and Benedetti, A.C.P. - UFSM
 email=romariocarvalho@hotmail.com
 
 about=It was developed to perform weighted multi-criteria analysis, especially for environmental analyses like fragilities or favorabilities studies, environmental zoning and other types of zoning.
@@ -20,7 +20,7 @@ repository=https://github.com/romariocarvalhoneto/Weighted-Multi-Criteria-Analys
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=Added asserts and user messages to ensure the X Y size of the loaded raster to avoid error.
 
 # Tags are comma separated with spaces allowed
 tags=multi-criteria, environmental analyses, zoning, análise ambiental, multicritério 
