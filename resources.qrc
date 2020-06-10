@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/multi_criteria" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
