@@ -125,12 +125,6 @@ class MultiCriteriaDialog(QtWidgets.QDialog, FORM_CLASS):
         nRaster = self.contRow
         for raster in range(nRaster):  # adds the values
             aba_tabela_Notas = self.tabWidget.widget(raster)
-            
-            ## TODO arrumar aqui uma forma das novas celulas poderem mudar de tamanho.
-
-            #grid_layout = QGridLayout()
-            #aba_tabela_Notas.setLayout(grid_layout)
-            #grid_layout.addWidget(aba_tabela_Notas)
             nClasse = aba_tabela_Notas.rowCount()
             for linhas in range(nClasse): 
                 checkBox_cel = aba_tabela_Notas.cellWidget(linhas,2)

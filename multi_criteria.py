@@ -237,6 +237,11 @@ class MultiCriteria:
                     self.tabelaNotas.insertColumn(2)
                     self.tabelaNotas.setHorizontalHeaderItem(2, QTableWidgetItem(QCoreApplication.translate("Tab title","Disregard")))
 
+                    header = self.tabelaNotas.horizontalHeader()  #to resize the columns
+                    header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+                    header.setSectionResizeMode(1, QHeaderView.Stretch)
+                    header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+ 
                     # ------ load the unique values of raster on table for user to give grades     
                     for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
                         if elementoUnico != self.noData:
@@ -418,6 +423,7 @@ class MultiCriteria:
             for raster in range(nRaster):  
                 listaNotas.append([]) #adds inside the list, a [] space to put the chosen rasters
                 aba_tabela_Notas = self.dlg.tabWidget.widget(raster)
+
                 nClasse = aba_tabela_Notas.rowCount()
                 for linhas in range(nClasse): 
                     listaNotas[raster].append([]) #adds inside the raster list, a [] space to put the chosen classes within each raster
