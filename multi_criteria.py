@@ -240,7 +240,7 @@ class MultiCriteria:
                     header = self.tabelaNotas.horizontalHeader()  #to resize the columns
                     header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
                     header.setSectionResizeMode(1, QHeaderView.Stretch)
-                    header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+                    header.setSectionResizeMode(2, QHeaderView.Stretch)
  
                     # ------ load the unique values of raster on table for user to give grades     
                     for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
