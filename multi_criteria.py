@@ -27,7 +27,8 @@ from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt,
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QTableWidget, QComboBox, QDialog, QVBoxLayout, QProgressBar
 from PyQt5.QtWidgets import *
-from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsTask, QgsApplication
+from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsTask, QgsApplication, QgsRasterLayer
+from qgis.gui import QgisInterface
 import time
 
 # Initialize Qt resources from file resources.py
@@ -42,7 +43,6 @@ import osr
 import numpy as np
 import os # This is needed in the pyqgis console also
 
-rowsEscolhido = []
 
 class MultiCriteria:
     """QGIS Plugin Implementation."""
@@ -95,7 +95,6 @@ class MultiCriteria:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('MultiCriteria', message)
-
 
     def add_action(
         self,
@@ -211,7 +210,7 @@ class MultiCriteria:
             if noData_daFuncao == None:
                 noData_daFuncao = -9999
             self.listaNoData.append(noData_daFuncao)
-            self.noData = self.listaNoData[0] #will work with the noData from the first raster selected
+            MultiCriteria.noData = self.listaNoData[0] #will work with the noData from the first raster selected
             arrayUso = np.array(rasterUso.ReadAsArray())
             
             #------ Check the size of the raster
@@ -225,9 +224,9 @@ class MultiCriteria:
                 QMessageBox.warning(self.dlg,QCoreApplication.translate('Message to user','Missing Information'), message)
            
             if carregar:
-                self.listaLayersSelecionados.append(layer_selecionado)
+                MultiCriteria.listaLayersSelecionados.append(layer_selecionado)
                 self.listaAssert.append((rasterOpen.RasterXSize,rasterOpen.RasterYSize)) #(X,Y)
-                if len(self.listaLayersSelecionados) == 1:
+                if len(MultiCriteria.listaLayersSelecionados) == 1:
                     #------ Creates the table
                     self.tabelaNotas = QTableWidget()
                     self.dlg.tableWidget.insertRow(row_number)
@@ -247,7 +246,7 @@ class MultiCriteria:
  
                     # ------ load the unique values of raster on table for user to give grades     
                     for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
-                        if elementoUnico != self.noData:
+                        if elementoUnico != MultiCriteria.noData:
                             self.desconsiderarCheckBox = QCheckBox(QCoreApplication.translate("Tab","Not Calculate"))
                             self.tabelaNotas.insertRow(row_number) 
                             self.tabelaNotas.setCellWidget(row_number,2,self.desconsiderarCheckBox)
@@ -275,7 +274,7 @@ class MultiCriteria:
 
                         # ------ load the unique values of raster on table for user to give grades     
                         for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
-                            if elementoUnico != self.noData:
+                            if elementoUnico != MultiCriteria.noData:
                                 self.desconsiderarCheckBox = QCheckBox(QCoreApplication.translate("Tab","Not Calculate"))
                                 self.tabelaNotas.insertRow(row_number) 
                                 self.tabelaNotas.setCellWidget(row_number,2,self.desconsiderarCheckBox)
@@ -292,7 +291,7 @@ class MultiCriteria:
                                                 str(self.listaAssert[-1][0]),
                                                 str(self.listaAssert[-1][1]))
                         QMessageBox.warning(self.dlg,QCoreApplication.translate('Message to user','Missing Information'), message)
-                        self.listaLayersSelecionados.pop(-1)
+                        MultiCriteria.listaLayersSelecionados.pop(-1)
                         self.listaAssert.pop(-1)
 
         else:
@@ -309,9 +308,125 @@ class MultiCriteria:
             nRows = self.dlg.tableWidget.rowCount()
             indexTab_remover = (nRows) - selecionado #the index of tab is inverse to the index of lines
             self.dlg.tabWidget.removeTab(indexTab_remover)
-            self.listaLayersSelecionados.pop(indexTab_remover)
+            MultiCriteria.listaLayersSelecionados.pop(indexTab_remover)
             self.listaNoData.pop(indexTab_remover)
             self.listaAssert.pop(indexTab_remover)
+
+    def select_output_file(self):
+        """Selects the output path and name"""
+        filename, _filter = QFileDialog.getSaveFileName(
+            self.dlg, QCoreApplication.translate('output',"Select the output folder and the raster name"),"", '*.tif') 
+        self.dlg.lineEdit.setText(filename)
+
+    def show_avaliacao(self, avaliacao_adress):
+    	self.iface.addRasterLayer(avaliacao_adress)
+    	return
+
+    def run(self):
+        """Run method that performs all the real work"""
+
+        # Create the dialog with elements (after translation) and keep reference
+        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
+        if self.first_start == True:
+            #self.first_start = False
+            self.dlg = MultiCriteriaDialog()
+            self.dlg.tabWidget.clear() #cleans the two tabs that came default
+        
+        self.listaNoData = []
+                
+        # Fetch the currently loaded layers                                          
+        layer_instance = QgsProject.instance()
+        layers = layer_instance.layerTreeRoot().children()          
+        # Clear the contents of the comboBox from previous runs                      
+        self.dlg.mMapLayerComboBox.clear()                                 
+        # Populate the comboBox with names of all the loaded layers                  
+        self.listaNomeRasters = [layer.name() for layer in layers]
+        self.dlg.mMapLayerComboBox.addItems(self.listaNomeRasters)
+        # list of rasters to update the layer to take its path
+        MultiCriteria.listaLayersSelecionados = [] #list of selected layers
+        self.listaAssert = [] #list to assert raster size
+        self.dlg.addRasterButton.clicked.connect(self.select_input_raster)  #adds the raster name(and more)to the table
+        self.dlg.removeRasterButton.clicked.connect(self.remove_input_raster)#removes the raster name(and more)from the table
+        self.dlg.pushButton.clicked.connect(self.select_output_file)
+        
+        # show the dialog
+        self.dlg.show()
+        # Run the dialog event loop
+        result = self.dlg.exec_()
+        # See if OK was pressed
+        if result:
+            
+            MultiCriteria.adress = self.dlg.lineEdit.text()
+
+            #----------- getting the typed values ----------------------------
+            
+            nColunasPeso = self.dlg.tableWidget.columnCount()#  <----
+            nRowsPeso = self.dlg.tableWidget.rowCount()#  <----
+            
+            MultiCriteria.listaPesos = [[] for raster in range(nRowsPeso)]  #  <----
+            
+            for linhas in range(nRowsPeso):
+                for colunas in range(nColunasPeso):
+                    itemValor = self.dlg.tableWidget.item(linhas,colunas) #  <----
+                    MultiCriteria.listaPesos[linhas].insert(0,itemValor.text())
+            
+            MultiCriteria.listaNotas = []  # list to contain the grades from the dialog box
+            
+            # ------ Build a list to get the pixel value and its corresponding given grade            
+            for raster in range(nRowsPeso):  
+                MultiCriteria.listaNotas.append([]) #adds inside the list, a [] space to put the chosen rasters
+                aba_tabela_Notas = self.dlg.tabWidget.widget(raster) #  <----
+                nClasse = aba_tabela_Notas.rowCount()  
+                for linhas in range(nClasse): 
+                    MultiCriteria.listaNotas[raster].append([]) #adds inside the raster list, a [] space to put the chosen classes within each raster
+                    checkBox_cel = aba_tabela_Notas.cellWidget(linhas,2) #  <----
+                    for colunas in range(2): # number of columns (3): raster pixel value, grade and "not considered" 
+                        itemValor = aba_tabela_Notas.item(linhas,colunas) #  <----
+                        if checkBox_cel.isChecked():
+                            if colunas == 1:
+                                MultiCriteria.listaNotas[raster][linhas].append(-9998)
+                            else:
+                                MultiCriteria.listaNotas[raster][linhas].append(itemValor.text())
+                        else:
+                            MultiCriteria.listaNotas[raster][linhas].append(itemValor.text())
+            
+            self.window = Window()
+            self.window.show()
+            
+
+class MyThread(QThread):
+    # Create a counter thread
+    change_value = pyqtSignal(int)
+
+    def raster2arrayNotas(self, rasterEntradaPath, listaEntradaNotas):
+        """Turns a raster into a array and replace pixel values by the grades"""
+        #--------------- transforming input rasters in arrays -----------------------
+
+        rasterOpen = gdal.Open(rasterEntradaPath) 
+        rasterUso = rasterOpen.GetRasterBand(1)
+        rasterUso.SetNoDataValue(MultiCriteria.noData)
+        arrayUso = np.array(rasterUso.ReadAsArray())
+        
+        #---------------------------- New grades ----------------------------------------   
+
+        arrayNota = [ [] for row in arrayUso ] #array with new values
+
+        for row in range(len(arrayUso)):
+            for pixel in arrayUso[row]:
+                if pixel == MultiCriteria.noData: #keep the nodata in place
+                    arrayNota[row].append(MultiCriteria.noData)
+                else:
+                    for substituicao in range(len(listaEntradaNotas)):
+                        valorPixel = listaEntradaNotas[substituicao][0] 
+                        notaRecebida = listaEntradaNotas[substituicao][1]
+                        if pixel == np.float32(valorPixel):
+                            try:
+                                arrayNota[row].append(float(notaRecebida)) # add the grade value
+                            except:
+                                arrayNota[row].append(float(-9998))# if there is a string, for exemplo,
+                        else:                                      # it will be replaced by a blocked
+                            pass
+        return arrayNota
 
     def array2raster(self, rasterfn, newRasterfn, array):  #rasterfn: name and path to model raster 
         """Turns a array into a raster"""                  #newRasterfn: name and path to new raster
@@ -328,488 +443,96 @@ class MultiCriteria:
         outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
         outband = outRaster.GetRasterBand(1)
         outband.WriteArray(array)
-        outband.SetNoDataValue(self.noData)
+        outband.SetNoDataValue(MultiCriteria.noData)
         outRasterSRS = osr.SpatialReference()
         outRasterSRS.ImportFromWkt(raster.GetProjectionRef())
         outRaster.SetProjection(outRasterSRS.ExportToWkt())
         outband.FlushCache()
 
-        #listaEntradaNotas = listaNotas = [[valorPixelAntigo,novoValorNota],[valorPixelAntigo2,novoValorNota2],[valorPixelAntigo3,novoValorNota3]]
-    def raster2arrayNotas(self, rasterEntradaPath, listaEntradaNotas):
-        """Turns a raster into a array and replace pixel values by the grades"""
-        #--------------- transforming input rasters in arrays -----------------------
-
-        rasterOpen = gdal.Open(rasterEntradaPath) 
-        rasterUso = rasterOpen.GetRasterBand(1)
-        rasterUso.SetNoDataValue(self.noData)
-        arrayUso = np.array(rasterUso.ReadAsArray())
-        
-        #---------------------------- New grades ----------------------------------------   
-
-        arrayNota = [ [] for row in arrayUso ] #array with new values
-
-        for row in range(len(arrayUso)):
-            for pixel in arrayUso[row]:
-                if pixel == self.noData: #keep the nodata in place
-                    arrayNota[row].append(self.noData)
-                else:
-                    for substituicao in range(len(listaEntradaNotas)):
-                        valorPixel = listaEntradaNotas[substituicao][0] 
-                        notaRecebida = listaEntradaNotas[substituicao][1]
-                        if pixel == np.float32(valorPixel):
-                            try:
-                                arrayNota[row].append(float(notaRecebida)) # add the grade value
-                            except:
-                                arrayNota[row].append(float(-9998))# if there is a string, for exemplo,
-                        else:                                      # it will be replaced by a blocked
-                            pass
-        return arrayNota
-    
-    def select_output_file(self):
-        """Selects the output path and name"""
-        filename, _filter = QFileDialog.getSaveFileName(
-            self.dlg, QCoreApplication.translate('output',"Select the output folder and the raster name"),"", '*.tif') 
-        self.dlg.lineEdit.setText(filename)
-
-
-    def messages(self, text):
-        """Displays messages to user"""
-        self.pBar.plainTextEdit.setReadOnly(True)
-        self.pBar.plainTextEdit.setPlainText(text)
-
-
-    # def progress(self, whereAt):
-    #     """Progress bar"""
-    #     #self.pBar.progressBar.setRange(0, 100)
-    #     #self.completed = 0
-    #     self.pBar.progressBar.setValue(whereAt)
-
-
     def run(self):
-        """Run method that performs all the real work"""
-
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start == True:
-            #self.first_start = False
-            self.dlg = MultiCriteriaDialog()
-            #self.bar = ProgressBarDialog()
-            #self.bar.show()
-            self.dlg.tabWidget.clear() #cleans the two tabs that came default
         
-        self.listaNoData = []
-        
-        # Fetch the currently loaded layers                                          
-        layer_instance = QgsProject.instance()
-        layers = layer_instance.layerTreeRoot().children()          
-        # Clear the contents of the comboBox from previous runs                      
-        self.dlg.mMapLayerComboBox.clear()                                 
-        # Populate the comboBox with names of all the loaded layers                  
-        self.listaNomeRasters = [layer.name() for layer in layers]
-        self.dlg.mMapLayerComboBox.addItems(self.listaNomeRasters)
-        # list of rasters to update the layer to take its path
-        self.listaLayersSelecionados = [] #list of selected layers
-        self.listaAssert = [] #list to assert raster size
-        self.dlg.addRasterButton.clicked.connect(self.select_input_raster)  #adds the raster name(and more)to the table
-        self.dlg.removeRasterButton.clicked.connect(self.remove_input_raster)#removes the raster name(and more)from the table
-        self.dlg.pushButton.clicked.connect(self.select_output_file)
-        
-        # show the dialog
-        self.dlg.show()
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            self.window = Window()
-            self.window.show()
-            #self.thrd = MyThread()
-
-            # from PyQt5.QtWidgets import *
-            # import time
-
-            # prog = QProgressDialog('Working...', 'Cancel', 0, 100)
-            # prog.setWindowModality(Qt.WindowModal)
-            # for i in range (1, 101):
-            #     # time.sleep(0.05)
-            #     prog.setValue(i)
-            #     if prog.wasCanceled():
-            #         break
-            # m = My_Dialog()
-            # m.show()
-
-
-            # self.pBar = ProgressBarDemo()
-            # self.pBar.show()
-            #self.progress(0)
-            #self.pBar.progressBar.setMinimum(0)
-            # prog.setValue(1)
-
-            # # --- barra de progresso na mensagem para usuario padrao do qgis
-            # progressMessageBar = self.iface.messageBar().createMessage("Doing something boring...")
-            # progress = QProgressBar()
-            # progress.setMaximum(100)
-            # progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-            # progressMessageBar.layout().addWidget(progress)
-            # self.iface.messageBar().pushWidget(progressMessageBar, Qgis.Info)
-            # progress.setValue(0)
-
-            #----------- getting the typed values ----------------------------
-            
-            nColunasPeso = self.dlg.tableWidget.columnCount()
-            nRowsPeso = self.dlg.tableWidget.rowCount()
-            print("cima")
-            print(nRowsPeso)
-            rowsEscolhido.append(nRowsPeso)
-            
-
-            # listaPesos = [[] for raster in range(nRowsPeso)]
-            
-            # for linhas in range(nRowsPeso):
-            #     for colunas in range(nColunasPeso):
-            #         itemValor = self.dlg.tableWidget.item(linhas,colunas)
-            #         # if itemValor == None:
-            #             # listaPesos[linhas].insert(0,"vazio")     #for debuging
-            #         # else:    
-            #         listaPesos[linhas].insert(0,itemValor.text())
-            
-            # nRaster = nRowsPeso
-            # listaNotas = []  # list to contain the grades from the dialog box
-            
-            # # #self.progress(15)
-            # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(15)))
-            # # progress.setValue(15)
-            # # prog.setValue(15)
-
-            # # ------ Build a list to get the pixel value and its corresponding given grade            
-            # for raster in range(nRaster):  
-            #     listaNotas.append([]) #adds inside the list, a [] space to put the chosen rasters
-            #     aba_tabela_Notas = self.dlg.tabWidget.widget(raster)
-            #     nClasse = aba_tabela_Notas.rowCount()
-            #     for linhas in range(nClasse): 
-            #         listaNotas[raster].append([]) #adds inside the raster list, a [] space to put the chosen classes within each raster
-            #         checkBox_cel = aba_tabela_Notas.cellWidget(linhas,2)
-            #         for colunas in range(2): # number of columns (3): raster pixel value, grade and "not considered" 
-            #             itemValor = aba_tabela_Notas.item(linhas,colunas)
-            #             # if aba_tabela_Notas.item(linhas,colunas) == None:
-            #                 # listaNotas[raster][linhas].append("vazio")    #for debuging
-            #             #else:
-            #             if checkBox_cel.isChecked():
-            #                 if colunas == 1:
-            #                     listaNotas[raster][linhas].append(-9998)
-            #                 else:
-            #                     listaNotas[raster][linhas].append(itemValor.text())
-            #             else:
-            #                 listaNotas[raster][linhas].append(itemValor.text())
-
-            # # # #self.progress(30)
-            # # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(30)))
-            # # # progress.setValue(30)
-            # # prog.setValue(30)
-
-            # # self.window = Window()
-            # # self.window.show()
-
-            # #------------------- Input and output of rasters ---------------------
-            
-            # listaPesos_paraCalculos = [] #it needs to be inverted according to the way data is inserted
-            
-            # for raster in listaPesos:
-            #     listaPesos_paraCalculos.insert(0, float(raster[0])) # gets only the grade, in float, for calculation
- 
-            # listaCalculo = []  # list to have the grades of all rasters for calculation
-            
-            # # #self.progress(45)
-            # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(45)))
-            # # progress.setValue(45)
-            # # prog.setValue(45)
-
-            # # ------ calls raster2arrayNotas() to have at last, a list of grade of each pixel by raster
-            # cont = 0
-            # for layer in self.listaLayersSelecionados:   
-            #     rasterPathCompleto = layer.source()
-            #     pegandoNotas = self.raster2arrayNotas(rasterPathCompleto, listaNotas[cont])
-            #     listaCalculo.append(pegandoNotas)
-            #     cont += 1
-
-            # # #self.progress(60)
-            # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(60)))
-            # # progress.setValue(60)
-            # # prog.setValue(60)
-
-            # # ------ list to have grade*weight of each pixel by raster
-            # listaCalculoCelula = [[ [] for row in raster] for raster in listaCalculo ] 
-
-            # for raster in range(len(listaCalculo)):
-            #     for row in range(len(listaCalculo[raster])):
-            #         for cel in range(len(listaCalculo[raster][row])):
-            #             if listaCalculo[raster][row][cel] == self.noData:
-            #                 listaCalculoCelula[raster][row].append(self.noData)
-            #             elif listaCalculo[raster][row][cel] == -9998:
-            #                 listaCalculoCelula[raster][row].append(-9998)
-            #             else:
-            #                 # takes the grade of each pixel and * for the weight given to the raster
-            #                 calculoCelula = listaCalculo[raster][row][cel]*listaPesos_paraCalculos[raster]
-            #                 listaCalculoCelula[raster][row].append(calculoCelula)
-            
-            # # #self.progress(75)
-            # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(75)))
-            # # progress.setValue(75)
-            # # prog.setValue(75)
-
-            # # ----- preparing last array to bacame a raster
-            # arrayModelo = [[] for row in listaCalculoCelula[0]] #array model to build the output raster
-            
-            # for raster in range(len(listaCalculoCelula)):
-            #     for row in range(len(listaCalculoCelula[raster])):
-            #         for cel in range(len(listaCalculoCelula[raster][row])):
-            #             if raster == 0:
-            #                 arrayModelo[row].append(listaCalculoCelula[raster][row][cel])
-            #             else:
-            #                 if listaCalculoCelula[raster][row][cel] == -9998: # gives priority to "not considered" and any 
-            #                     arrayModelo[row].pop(cel)                     # other value on that cell will be -9998
-            #                     arrayModelo[row].insert(cel,-9998)
-            #                 elif listaCalculoCelula[raster][row][cel] == self.noData:
-            #                     arrayModelo[row].pop(cel)
-            #                     arrayModelo[row].insert(cel,self.noData)
-            #                 else:
-            #                     if arrayModelo[row][cel] == -9998:  # also gives priority to "not considered" and any
-            #                         pass #it continues -9998            # other value on that cell will be -9998
-            #                     elif arrayModelo[row][cel] == self.noData:
-            #                         if listaCalculoCelula[raster][row][cel] == -9998:
-            #                             arrayModelo[row].pop(cel)         
-            #                             arrayModelo[row].insert(cel,-9998)#turns nodata into "not considered"
-            #                     else:
-            #                         val = arrayModelo[row].pop(cel) # pop return the taken value
-            #                         arrayModelo[row].insert(cel,(val+listaCalculoCelula[raster][row][cel]))
-
-            # # #self.progress(90)
-            # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(90)))
-            # # progress.setValue(90)
-            # # prog.setValue(90)
-
-            # # ----------------------- Building final raster -------------------------------
-
-            # rasterModelPathCompleto = self.listaLayersSelecionados[0].source() # takes first raster chosen as model
-            # rasterAvalicaoPath = self.dlg.lineEdit.text()
-            # self.array2raster(rasterModelPathCompleto,rasterAvalicaoPath,np.array(arrayModelo))
-            # layerAvaliacao = self.iface.addRasterLayer(rasterAvalicaoPath)
-            
-            # # #self.progress(100)
-            # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(100)))
-            # # progress.setValue(100)
-            # # prog.setValue(100)
-
-class MyThread(QThread):
-    # Create a counter thread
-    change_value = pyqtSignal(int)
-    def run(self):
-        self.dlg = MultiCriteriaDialog()
         cnt = 0
         self.change_value.emit(cnt)
-        # self.listaNoData = []
+       
+        #------------------- Input and output of rasters ---------------------
         
-        # # Fetch the currently loaded layers                                          
-        # layer_instance = QgsProject.instance()
-        # layers = layer_instance.layerTreeRoot().children()          
-        # # Clear the contents of the comboBox from previous runs                      
-        # self.dlg.mMapLayerComboBox.clear()                                 
-        # # Populate the comboBox with names of all the loaded layers                  
-        # self.listaNomeRasters = [layer.name() for layer in layers]
-        # self.dlg.mMapLayerComboBox.addItems(self.listaNomeRasters)
-        # # list of rasters to update the layer to take its path
-        # self.listaLayersSelecionados = [] #list of selected layers
-        # self.listaAssert = [] #list to assert raster size
-        # self.dlg.addRasterButton.clicked.connect(self.mlt.select_input_raster)  #adds the raster name(and more)to the table
-        # self.dlg.removeRasterButton.clicked.connect(self.mlt.remove_input_raster)#removes the raster name(and more)from the table
-        # self.dlg.pushButton.clicked.connect(self.mlt.select_output_file)
-
-        # for i in range(1000):
-        #     cnt = 10
-        #     print(cnt)
-        #     self.change_value.emit(cnt)
+        listaPesos_paraCalculos = [] #it needs to be inverted according to the way data is inserted
         
-        # self.change_value.emit(cnt)
-        # for i in range(1000):
-        #     cnt = 30
-        #     print(cnt)
-        #     self.change_value.emit(cnt)
+        for raster in MultiCriteria.listaPesos:
+            listaPesos_paraCalculos.insert(0, float(raster[0])) # gets only the grade, in float, for calculation
 
-        # self.change_value.emit(cnt)
-        # for i in range(1000):
-        #     cnt = 60
-        #     print(cnt)
-        #     self.change_value.emit(cnt)
-
-        # self.change_value.emit(cnt)
-        # for i in range(1000):
-        #     cnt = 90
-        #     print(cnt)
-        #     self.change_value.emit(cnt)
+        listaCalculo = []  # list to have the grades of all rasters for calculation
         
-        # self.change_value.emit(100)
+        cnt = 45
+        self.change_value.emit(cnt)
 
-        # while cnt < 100:
-        #     cnt+=1
-        #     time.sleep(0.3)
-        #     self.change_value.emit(cnt)
-        #     #print(self.change_value.emit(cnt))
+        # ------ calls raster2arrayNotas() to have at last, a list of grade of each pixel by raster
+        cont = 0
+        for layer in MultiCriteria.listaLayersSelecionados:   
+            rasterPathCompleto = layer.source()
+            pegandoNotas = self.raster2arrayNotas(rasterPathCompleto, MultiCriteria.listaNotas[cont])
+            listaCalculo.append(pegandoNotas)
+            cont += 1
 
+        cnt = 60
+        self.change_value.emit(cnt)
 
-        #----------- getting the typed values ----------------------------
+        # ------ list to have grade*weight of each pixel by raster
+        listaCalculoCelula = [[ [] for row in raster] for raster in listaCalculo ] 
+
+        for raster in range(len(listaCalculo)):
+            for row in range(len(listaCalculo[raster])):
+                for cel in range(len(listaCalculo[raster][row])):
+                    if listaCalculo[raster][row][cel] == MultiCriteria.noData:
+                        listaCalculoCelula[raster][row].append(MultiCriteria.noData)
+                    elif listaCalculo[raster][row][cel] == -9998:
+                        listaCalculoCelula[raster][row].append(-9998)
+                    else:
+                        # takes the grade of each pixel and * for the weight given to the raster
+                        calculoCelula = listaCalculo[raster][row][cel]*listaPesos_paraCalculos[raster]
+                        listaCalculoCelula[raster][row].append(calculoCelula)
+
+        cnt = 75
+        self.change_value.emit(cnt)
+
+        # ----- preparing last array to bacame a raster
+        arrayModelo = [[] for row in listaCalculoCelula[0]] #array model to build the output raster
         
-        # nColunasPeso = self.dlg.tableWidget.columnCount()
-        # nRowsPeso = self.dlg.tableWidget.rowCount()
+        for raster in range(len(listaCalculoCelula)):
+            for row in range(len(listaCalculoCelula[raster])):
+                for cel in range(len(listaCalculoCelula[raster][row])):
+                    if raster == 0:
+                        arrayModelo[row].append(listaCalculoCelula[raster][row][cel])
+                    else:
+                        if listaCalculoCelula[raster][row][cel] == -9998: # gives priority to "not considered" and any 
+                            arrayModelo[row].pop(cel)                     # other value on that cell will be -9998
+                            arrayModelo[row].insert(cel,-9998)
+                        elif listaCalculoCelula[raster][row][cel] == MultiCriteria.noData:
+                            arrayModelo[row].pop(cel)
+                            arrayModelo[row].insert(cel,MultiCriteria.noData)
+                        else:
+                            if arrayModelo[row][cel] == -9998:  # also gives priority to "not considered" and any
+                                pass #it continues -9998            # other value on that cell will be -9998
+                            elif arrayModelo[row][cel] == MultiCriteria.noData:
+                                if listaCalculoCelula[raster][row][cel] == -9998:
+                                    arrayModelo[row].pop(cel)         
+                                    arrayModelo[row].insert(cel,-9998)#turns nodata into "not considered"
+                            else:
+                                val = arrayModelo[row].pop(cel) # pop return the taken value
+                                arrayModelo[row].insert(cel,(val+listaCalculoCelula[raster][row][cel]))
         
-        print(rowsEscolhido)
-        print("baixo")
+        cnt = 90
+        self.change_value.emit(cnt)
 
-        # listaPesos = [[] for raster in range(nRowsPeso)]
-        
-        # for linhas in range(nRowsPeso):
-        #     for colunas in range(nColunasPeso):
-        #         itemValor = self.dlg.tableWidget.item(linhas,colunas)
-        #         # if itemValor == None:
-        #             # listaPesos[linhas].insert(0,"vazio")     #for debuging
-        #         # else:    
-        #         listaPesos[linhas].insert(0,itemValor.text())
-        
-        # nRaster = nRowsPeso
-        # listaNotas = []  # list to contain the grades from the dialog box
-        
-        # # #self.progress(15)
-        # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(15)))
-        # # progress.setValue(15)
-        # cnt = 15
-        # self.change_value.emit(cnt)
-        # print(cnt)
+        # ----------------------- Building final raster -------------------------------
 
-        # # ------ Build a list to get the pixel value and its corresponding given grade            
-        # for raster in range(nRaster):  
-        #     listaNotas.append([]) #adds inside the list, a [] space to put the chosen rasters
-        #     aba_tabela_Notas = self.dlg.tabWidget.widget(raster)
-        #     nClasse = aba_tabela_Notas.rowCount()
-        #     for linhas in range(nClasse): 
-        #         listaNotas[raster].append([]) #adds inside the raster list, a [] space to put the chosen classes within each raster
-        #         checkBox_cel = aba_tabela_Notas.cellWidget(linhas,2)
-        #         for colunas in range(2): # number of columns (3): raster pixel value, grade and "not considered" 
-        #             itemValor = aba_tabela_Notas.item(linhas,colunas)
-        #             # if aba_tabela_Notas.item(linhas,colunas) == None:
-        #                 # listaNotas[raster][linhas].append("vazio")    #for debuging
-        #             #else:
-        #             if checkBox_cel.isChecked():
-        #                 if colunas == 1:
-        #                     listaNotas[raster][linhas].append(-9998)
-        #                 else:
-        #                     listaNotas[raster][linhas].append(itemValor.text())
-        #             else:
-        #                 listaNotas[raster][linhas].append(itemValor.text())
+        rasterModelPathCompleto = MultiCriteria.listaLayersSelecionados[0].source() # takes first raster chosen as model
+        MyThread.rasterAvalicaoPath = MultiCriteria.adress
 
-        # # #self.progress(30)
-        # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(30)))
-        # # progress.setValue(30)
-        # cnt = 30
-        # self.change_value.emit(cnt)
-        # print(cnt)
+        self.array2raster(rasterModelPathCompleto,MyThread.rasterAvalicaoPath,np.array(arrayModelo))
 
-        # #------------------- Input and output of rasters ---------------------
-        
-        # listaPesos_paraCalculos = [] #it needs to be inverted according to the way data is inserted
-        
-        # for raster in listaPesos:
-        #     listaPesos_paraCalculos.insert(0, float(raster[0])) # gets only the grade, in float, for calculation
-
-        # listaCalculo = []  # list to have the grades of all rasters for calculation
-        
-        # # #self.progress(45)
-        # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(45)))
-        # # progress.setValue(45)
-        # cnt = 45
-        # self.change_value.emit(cnt)
-        # print(cnt)
-
-        # # ------ calls raster2arrayNotas() to have at last, a list of grade of each pixel by raster
-        # cont = 0
-        # for layer in self.listaLayersSelecionados:   
-        #     rasterPathCompleto = layer.source()
-        #     pegandoNotas = self.raster2arrayNotas(rasterPathCompleto, listaNotas[cont])
-        #     listaCalculo.append(pegandoNotas)
-        #     cont += 1
-
-        # # #self.progress(60)
-        # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(60)))
-        # # progress.setValue(60)
-        # cnt = 60
-        # self.change_value.emit(cnt)
-        # print(cnt)
-
-        # # ------ list to have grade*weight of each pixel by raster
-        # listaCalculoCelula = [[ [] for row in raster] for raster in listaCalculo ] 
-
-        # for raster in range(len(listaCalculo)):
-        #     for row in range(len(listaCalculo[raster])):
-        #         for cel in range(len(listaCalculo[raster][row])):
-        #             if listaCalculo[raster][row][cel] == self.noData:
-        #                 listaCalculoCelula[raster][row].append(self.noData)
-        #             elif listaCalculo[raster][row][cel] == -9998:
-        #                 listaCalculoCelula[raster][row].append(-9998)
-        #             else:
-        #                 # takes the grade of each pixel and * for the weight given to the raster
-        #                 calculoCelula = listaCalculo[raster][row][cel]*listaPesos_paraCalculos[raster]
-        #                 listaCalculoCelula[raster][row].append(calculoCelula)
-        
-        # # #self.progress(75)
-        # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(75)))
-        # # progress.setValue(75)
-        # cnt = 75
-        # self.change_value.emit(cnt)
-        # print(cnt)
-
-        # # ----- preparing last array to bacame a raster
-        # arrayModelo = [[] for row in listaCalculoCelula[0]] #array model to build the output raster
-        
-        # for raster in range(len(listaCalculoCelula)):
-        #     for row in range(len(listaCalculoCelula[raster])):
-        #         for cel in range(len(listaCalculoCelula[raster][row])):
-        #             if raster == 0:
-        #                 arrayModelo[row].append(listaCalculoCelula[raster][row][cel])
-        #             else:
-        #                 if listaCalculoCelula[raster][row][cel] == -9998: # gives priority to "not considered" and any 
-        #                     arrayModelo[row].pop(cel)                     # other value on that cell will be -9998
-        #                     arrayModelo[row].insert(cel,-9998)
-        #                 elif listaCalculoCelula[raster][row][cel] == self.noData:
-        #                     arrayModelo[row].pop(cel)
-        #                     arrayModelo[row].insert(cel,self.noData)
-        #                 else:
-        #                     if arrayModelo[row][cel] == -9998:  # also gives priority to "not considered" and any
-        #                         pass #it continues -9998            # other value on that cell will be -9998
-        #                     elif arrayModelo[row][cel] == self.noData:
-        #                         if listaCalculoCelula[raster][row][cel] == -9998:
-        #                             arrayModelo[row].pop(cel)         
-        #                             arrayModelo[row].insert(cel,-9998)#turns nodata into "not considered"
-        #                     else:
-        #                         val = arrayModelo[row].pop(cel) # pop return the taken value
-        #                         arrayModelo[row].insert(cel,(val+listaCalculoCelula[raster][row][cel]))
-
-        # # #self.progress(90)
-        # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(90)))
-        # # progress.setValue(90)
-        # cnt = 90
-        # self.change_value.emit(cnt)
-        # print(cnt)
-
-        # # ----------------------- Building final raster -------------------------------
-
-        # rasterModelPathCompleto = self.listaLayersSelecionados[0].source() # takes first raster chosen as model
-        # rasterAvalicaoPath = self.dlg.lineEdit.text()
-        # self.array2raster(rasterModelPathCompleto,rasterAvalicaoPath,np.array(arrayModelo))
-        # layerAvaliacao = self.iface.addRasterLayer(rasterAvalicaoPath)
-        
-        # # #self.progress(100)
-        # # self.iface.statusBarIface().showMessage("Processed {} %".format(int(100)))
-        # # progress.setValue(100)
-        # cnt = 100
-        # self.change_value.emit(cnt)
-        # print(cnt)
+        cnt = 100
+        self.change_value.emit(cnt)
 
 
 class Window(QDialog):
@@ -848,218 +571,3 @@ class Window(QDialog):
  
     def setProgressVal(self, val):
         self.progressbar.setValue(val)
-
-
-# class TestTask(QgsTask):
-#     """Here we subclass QgsTask"""
-#     def __init__(self, desc):
-#         QgsTask.__init__(self, desc)
-
-#     def run(self):
-#         """This function is where you do the 'heavy lifting' or implement
-#         the task which you want to run in a background thread. This function 
-#         must return True or False and should only interact with the main thread
-#         via signals"""
-#         # for i in range (21):
-#         #     time.sleep(0.5)
-#         #     val = i * 5
-#         #     #report progress which can be received by the main thread
-#         #     self.setProgress(val)
-
-#         #----------- getting the typed values ----------------------------
-            
-#         nColunasPeso = self.dlg.tableWidget.columnCount()
-#         nRowsPeso = self.dlg.tableWidget.rowCount()
-
-#         listaPesos = [[] for raster in range(nRowsPeso)]
-        
-#         for linhas in range(nRowsPeso):
-#             for colunas in range(nColunasPeso):
-#                 itemValor = self.dlg.tableWidget.item(linhas,colunas)
-#                 # if itemValor == None:
-#                     # listaPesos[linhas].insert(0,"vazio")     #for debuging
-#                 # else:    
-#                 listaPesos[linhas].insert(0,itemValor.text())
-        
-#         nRaster = nRowsPeso
-#         listaNotas = []  # list to contain the grades from the dialog box
-        
-#         # #self.progress(15)
-#         # self.iface.statusBarIface().showMessage("Processed {} %".format(int(15)))
-#         # progress.setValue(15)
-#         self.setProgress(1)
-
-#         # ------ Build a list to get the pixel value and its corresponding given grade            
-#         for raster in range(nRaster):  
-#             listaNotas.append([]) #adds inside the list, a [] space to put the chosen rasters
-#             aba_tabela_Notas = self.dlg.tabWidget.widget(raster)
-#             nClasse = aba_tabela_Notas.rowCount()
-#             for linhas in range(nClasse): 
-#                 listaNotas[raster].append([]) #adds inside the raster list, a [] space to put the chosen classes within each raster
-#                 checkBox_cel = aba_tabela_Notas.cellWidget(linhas,2)
-#                 for colunas in range(2): # number of columns (3): raster pixel value, grade and "not considered" 
-#                     itemValor = aba_tabela_Notas.item(linhas,colunas)
-#                     # if aba_tabela_Notas.item(linhas,colunas) == None:
-#                         # listaNotas[raster][linhas].append("vazio")    #for debuging
-#                     #else:
-#                     if checkBox_cel.isChecked():
-#                         if colunas == 1:
-#                             listaNotas[raster][linhas].append(-9998)
-#                         else:
-#                             listaNotas[raster][linhas].append(itemValor.text())
-#                     else:
-#                         listaNotas[raster][linhas].append(itemValor.text())
-
-#         # #self.progress(30)
-#         # self.iface.statusBarIface().showMessage("Processed {} %".format(int(30)))
-#         # progress.setValue(30)
-#         self.setProgress(30)
-
-#         #------------------- Input and output of rasters ---------------------
-        
-#         listaPesos_paraCalculos = [] #it needs to be inverted according to the way data is inserted
-        
-#         for raster in listaPesos:
-#             listaPesos_paraCalculos.insert(0, float(raster[0])) # gets only the grade, in float, for calculation
-
-#         listaCalculo = []  # list to have the grades of all rasters for calculation
-        
-#         # #self.progress(45)
-#         # self.iface.statusBarIface().showMessage("Processed {} %".format(int(45)))
-#         # progress.setValue(45)
-#         self.setProgress(45)
-
-#         # ------ calls raster2arrayNotas() to have at last, a list of grade of each pixel by raster
-#         cont = 0
-#         for layer in self.listaLayersSelecionados:   
-#             rasterPathCompleto = layer.source()
-#             pegandoNotas = self.raster2arrayNotas(rasterPathCompleto, listaNotas[cont])
-#             listaCalculo.append(pegandoNotas)
-#             cont += 1
-
-#         # #self.progress(60)
-#         # self.iface.statusBarIface().showMessage("Processed {} %".format(int(60)))
-#         # progress.setValue(60)
-#         self.setProgress(60)
-
-#         # ------ list to have grade*weight of each pixel by raster
-#         listaCalculoCelula = [[ [] for row in raster] for raster in listaCalculo ] 
-
-#         for raster in range(len(listaCalculo)):
-#             for row in range(len(listaCalculo[raster])):
-#                 for cel in range(len(listaCalculo[raster][row])):
-#                     if listaCalculo[raster][row][cel] == self.noData:
-#                         listaCalculoCelula[raster][row].append(self.noData)
-#                     elif listaCalculo[raster][row][cel] == -9998:
-#                         listaCalculoCelula[raster][row].append(-9998)
-#                     else:
-#                         # takes the grade of each pixel and * for the weight given to the raster
-#                         calculoCelula = listaCalculo[raster][row][cel]*listaPesos_paraCalculos[raster]
-#                         listaCalculoCelula[raster][row].append(calculoCelula)
-        
-#         # #self.progress(75)
-#         # self.iface.statusBarIface().showMessage("Processed {} %".format(int(75)))
-#         # progress.setValue(75)
-#         self.setProgress(75)
-
-#         # ----- preparing last array to bacame a raster
-#         arrayModelo = [[] for row in listaCalculoCelula[0]] #array model to build the output raster
-        
-#         for raster in range(len(listaCalculoCelula)):
-#             for row in range(len(listaCalculoCelula[raster])):
-#                 for cel in range(len(listaCalculoCelula[raster][row])):
-#                     if raster == 0:
-#                         arrayModelo[row].append(listaCalculoCelula[raster][row][cel])
-#                     else:
-#                         if listaCalculoCelula[raster][row][cel] == -9998: # gives priority to "not considered" and any 
-#                             arrayModelo[row].pop(cel)                     # other value on that cell will be -9998
-#                             arrayModelo[row].insert(cel,-9998)
-#                         elif listaCalculoCelula[raster][row][cel] == self.noData:
-#                             arrayModelo[row].pop(cel)
-#                             arrayModelo[row].insert(cel,self.noData)
-#                         else:
-#                             if arrayModelo[row][cel] == -9998:  # also gives priority to "not considered" and any
-#                                 pass #it continues -9998            # other value on that cell will be -9998
-#                             elif arrayModelo[row][cel] == self.noData:
-#                                 if listaCalculoCelula[raster][row][cel] == -9998:
-#                                     arrayModelo[row].pop(cel)         
-#                                     arrayModelo[row].insert(cel,-9998)#turns nodata into "not considered"
-#                             else:
-#                                 val = arrayModelo[row].pop(cel) # pop return the taken value
-#                                 arrayModelo[row].insert(cel,(val+listaCalculoCelula[raster][row][cel]))
-
-#         # #self.progress(90)
-#         # self.iface.statusBarIface().showMessage("Processed {} %".format(int(90)))
-#         # progress.setValue(90)
-#         self.setProgress(90)
-
-#         # ----------------------- Building final raster -------------------------------
-
-#         rasterModelPathCompleto = self.listaLayersSelecionados[0].source() # takes first raster chosen as model
-#         rasterAvalicaoPath = self.dlg.lineEdit.text()
-#         self.array2raster(rasterModelPathCompleto,rasterAvalicaoPath,np.array(arrayModelo))
-#         layerAvaliacao = self.iface.addRasterLayer(rasterAvalicaoPath)
-
-#         self.setProgress(100)
-
-#         #check to see if the task has been cancelled
-#         if self.isCanceled():
-#             return False
-        
-#         return True
-
-    # def finished(self, result):
-    #     """This function is called automatically when the task is completed and is
-    #     called from the main thread so it is safe to interact with the GUI etc here"""
-    #     if result is False:
-    #         iface.messageBar().pushMessage('Task was cancelled')
-    #     else:
-    #         iface.messageBar().pushMessage('Task Complete')
-
-# class My_Dialog(QDialog):
-#     def __init__(self, parent=None):
-#         QDialog.__init__(self, parent)
-#         self.resize(500, 350)
-#         self.lbl_info = QLabel('Info:', self)
-#         self.lbl_info.move(100, 50)
-#         self.edit_info = QLineEdit(self)
-#         self.edit_info.move(200, 50)
-#         lbl_prog = QLabel('Task Progress: ', self)
-#         lbl_prog.move(100, 210)
-#         self.prog = QProgressBar(self)
-#         self.prog.resize(200, 30)
-#         self.prog.move(200, 200)
-#         btn_OK = QPushButton('OK', self)
-#         btn_OK.move(300, 300)
-#         #btn_OK.clicked.connect(self.newTask)
-#         self.newTask()
-#         btn_close = QPushButton('Close',self)
-#         btn_close.move(400, 300)
-#         btn_close.clicked.connect(self.close_win)
-#         btn_cancel = QPushButton('Cancel Task', self)
-#         btn_cancel.move(50, 300)
-#         btn_cancel.clicked.connect(self.cancelTask)
-
-
-#     def newTask(self):
-#         """Create a task and add it to the Task Manager"""
-#         self.task = TestTask('Custom Task')
-#         #connect to signals from the background threads to perform gui operations
-#         #such as updating the progress bar
-#         self.task.begun.connect(lambda: self.edit_info.setText('Working...'))
-#         self.task.progressChanged.connect(lambda: self.prog.setValue(self.task.progress()))
-#         self.task.taskCompleted.connect(lambda: self.edit_info.setText('Task Complete'))
-#         self.task.taskTerminated.connect(self.TaskCancelled)
-#         QgsApplication.taskManager().addTask(self.task)
-
-#     def cancelTask(self):
-#         self.task.cancel()
-
-#     def TaskCancelled(self):
-#         self.prog.setValue(0)
-#         self.edit_info.setText('Task Cancelled')
-
-#     def close_win(self):
-#         My_Dialog.close(self)
-
-
