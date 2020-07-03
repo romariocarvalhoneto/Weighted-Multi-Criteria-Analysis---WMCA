@@ -231,16 +231,14 @@ class MultiCriteria:
                     self.dlg.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(nomeRaster)))
                     self.dlg.tabWidget.addTab(self.tabelaNotas,nomeRaster)
                     self.tabelaNotas.insertColumn(0)
+                    self.tabelaNotas.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
                     self.tabelaNotas.setHorizontalHeaderItem(0, QTableWidgetItem(QCoreApplication.translate("Tab title","Original Value")))
                     self.tabelaNotas.insertColumn(1)
+                    self.tabelaNotas.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
                     self.tabelaNotas.setHorizontalHeaderItem(1, QTableWidgetItem(QCoreApplication.translate("Tab title","Grade")))
                     self.tabelaNotas.insertColumn(2)
+                    self.tabelaNotas.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
                     self.tabelaNotas.setHorizontalHeaderItem(2, QTableWidgetItem(QCoreApplication.translate("Tab title","Disregard")))
-
-                    header = self.tabelaNotas.horizontalHeader()  #to resize the columns
-                    header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-                    header.setSectionResizeMode(1, QHeaderView.Stretch)
-                    header.setSectionResizeMode(2, QHeaderView.Stretch)
  
                     # ------ load the unique values of raster on table for user to give grades     
                     for elementoUnico in sorted(np.unique(arrayUso),reverse=True):
@@ -264,10 +262,13 @@ class MultiCriteria:
                         self.dlg.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(nomeRaster)))
                         self.dlg.tabWidget.addTab(self.tabelaNotas,nomeRaster)
                         self.tabelaNotas.insertColumn(0)
+                        self.tabelaNotas.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
                         self.tabelaNotas.setHorizontalHeaderItem(0, QTableWidgetItem(QCoreApplication.translate("Tab title","Original Value")))
                         self.tabelaNotas.insertColumn(1)
+                        self.tabelaNotas.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
                         self.tabelaNotas.setHorizontalHeaderItem(1, QTableWidgetItem(QCoreApplication.translate("Tab title","Grade")))
                         self.tabelaNotas.insertColumn(2)
+                        self.tabelaNotas.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
                         self.tabelaNotas.setHorizontalHeaderItem(2, QTableWidgetItem(QCoreApplication.translate("Tab title","Disregard")))
 
                         # ------ load the unique values of raster on table for user to give grades     
