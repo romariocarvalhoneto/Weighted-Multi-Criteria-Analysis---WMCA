@@ -393,15 +393,15 @@ class MultiCriteria:
                         else:
                             MultiCriteria.listaNotas[raster][linhas].append(itemValor.text())
 
-            self.progress_bar = ProgessBar()
-            self.progress_bar.show()
-
+            MultiCriteria.progress_bar = ProgessBar()
+            MultiCriteria.progress_bar.show()
+            #MultiCriteria.progress_bar.newTask('Calculating...')
 
 
 class HeavyTask(QgsTask):
     """Here we subclass QgsTask"""
-    def __init__(self):#, desc):
-        QgsTask.__init__(self)#, desc)
+    def __init__(self, desc):
+        QgsTask.__init__(self, desc)
 
 
     def raster2arrayNotas(self, rasterEntradaPath, listaEntradaNotas):
@@ -493,7 +493,6 @@ class HeavyTask(QgsTask):
         
         cnt = 10
         self.setProgress(cnt)
-
         # ------ calls raster2arrayNotas() to have at last, a list of grade of each pixel by raster
 
         #--- calculate a aprox size to put in the progress bar  
@@ -603,7 +602,7 @@ class ProgessBar(QDialog):
         self.prog = QProgressBar(self)
         self.prog.resize(230, 30)
         self.prog.move(40, 55) 
-        self.newTask()
+        self.newTask('Calculating...')
         btn_close = QPushButton('Close',self)
         btn_close.move(190, 100)
         btn_close.clicked.connect(self.close_win)
@@ -612,12 +611,12 @@ class ProgessBar(QDialog):
         ProgessBar.btn_cancel.clicked.connect(self.cancelTask)
 
 
-    def newTask(self):
+    def newTask(self, message_task_description):
         """Create a task and add it to the Task Manager"""
-        self.task = HeavyTask()#'description')
+        self.task = HeavyTask(message_task_description)
         #connect to signals from the background threads to perform gui operations
         #such as updating the progress bar
-        self.task.begun.connect(lambda: self.edit_info.setText('Calculating...'))
+        self.task.begun.connect(lambda: self.edit_info.setText(self.task.description()))
         self.task.progressChanged.connect(lambda: self.prog.setValue(self.task.progress()))
         self.task.taskCompleted.connect(lambda: self.edit_info.setText('Complete'))
         self.task.taskTerminated.connect(self.TaskCancelled)
@@ -634,4 +633,4 @@ class ProgessBar(QDialog):
 
 
     def close_win(self):
-        ProgessBar.close(self)
+        self.close()
