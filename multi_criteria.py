@@ -506,7 +506,6 @@ class HeavyTask(QgsTask):
             self.setProgress(self.div)
             rasterPathCompleto = layer.source()
             pegandoNotas = self.raster2arrayNotas(rasterPathCompleto, MultiCriteria.listaNotas[cont])
-            print("depois do calculo:", self.chunk)
             listaCalculo.append(pegandoNotas)
             cont += 1
             self.chunk += self.div
@@ -595,25 +594,21 @@ class HeavyTask(QgsTask):
 class ProgessBar(QDialog):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
-        self.resize(500, 350)
-        self.lbl_info = QLabel('Info:', self)
-        self.lbl_info.move(100, 50)
+        self.resize(310, 140)
+        self.lbl_info = QLabel('Info:', self) 
+        self.lbl_info.move(40, 25) # label with Info
         self.edit_info = QLineEdit(self)
-        self.edit_info.move(200, 50)
-        lbl_prog = QLabel('Task Progress: ', self)
-        lbl_prog.move(100, 210)
+        self.edit_info.resize(170, 20)
+        self.edit_info.move(100, 20) # Show changing messages
         self.prog = QProgressBar(self)
-        self.prog.resize(200, 30)
-        self.prog.move(200, 200)
-        #btn_OK = QPushButton('OK', self)
-        #btn_OK.move(300, 300)
-        #btn_OK.clicked.connect(self.newTask)
+        self.prog.resize(230, 30)
+        self.prog.move(40, 55) 
         self.newTask()
         btn_close = QPushButton('Close',self)
-        btn_close.move(400, 300)
+        btn_close.move(190, 100)
         btn_close.clicked.connect(self.close_win)
         ProgessBar.btn_cancel = QPushButton('Cancel Task', self)
-        ProgessBar.btn_cancel.move(50, 300)
+        ProgessBar.btn_cancel.move(40, 100)
         ProgessBar.btn_cancel.clicked.connect(self.cancelTask)
 
 
@@ -622,9 +617,9 @@ class ProgessBar(QDialog):
         self.task = HeavyTask()#'description')
         #connect to signals from the background threads to perform gui operations
         #such as updating the progress bar
-        self.task.begun.connect(lambda: self.edit_info.setText('Working...'))
+        self.task.begun.connect(lambda: self.edit_info.setText('Calculating...'))
         self.task.progressChanged.connect(lambda: self.prog.setValue(self.task.progress()))
-        self.task.taskCompleted.connect(lambda: self.edit_info.setText('Task Complete'))
+        self.task.taskCompleted.connect(lambda: self.edit_info.setText('Complete'))
         self.task.taskTerminated.connect(self.TaskCancelled)
         QgsApplication.taskManager().addTask(self.task)
 
