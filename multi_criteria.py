@@ -23,18 +23,16 @@
  ***************************************************************************/
 """
 from PyQt5 import QtGui
-from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QThread, pyqtSignal
+from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QAction, QTableWidget, QComboBox, QDialog, QVBoxLayout, QProgressBar
+from PyQt5.QtWidgets import QAction, QTableWidget, QDialog, QProgressBar, QComboBox
 from PyQt5.QtWidgets import *
-from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsTask, QgsApplication, QgsRasterLayer
-#from qgis.gui import QgisInterface
+from qgis.core import QgsProject, QgsTask, QgsApplication#, Qgis
 from qgis.utils import iface
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
 from .multi_criteria_dialog import MultiCriteriaDialog
-#from .progress_bar_dialog import ProgressBarDemo
 import os.path
 # modules for the calculus
 from osgeo import gdal
