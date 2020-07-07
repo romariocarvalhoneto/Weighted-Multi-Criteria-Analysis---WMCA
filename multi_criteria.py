@@ -27,7 +27,7 @@ from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QTableWidget, QDialog, QProgressBar, QComboBox
 from PyQt5.QtWidgets import *
-from qgis.core import QgsProject, QgsTask, QgsApplication#, Qgis
+from qgis.core import QgsProject, QgsTask, QgsApplication, Qgis
 from qgis.utils import iface
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -581,8 +581,8 @@ class HeavyTask(QgsTask):
         if result is False:
             iface.messageBar().pushMessage('Task was cancelled')
         else:
-            iface.messageBar().pushMessage('Task Complete')
             iface.addRasterLayer(self.rasterAvalicaoPath)
+            iface.messageBar().pushMessage('Complete')
             #ProgessBar.btn_cancel.setEnabled(False)
 
 
@@ -599,7 +599,7 @@ class ProgessBar(QDialog):
         self.prog = QProgressBar(self)
         self.prog.resize(230, 30)
         self.prog.move(40, 55) 
-        self.newTask('Calculating...')
+        self.newTask('Weighted Multi-Criteria Analysis - WMCA')
         btn_close = QPushButton('Close',self)
         btn_close.move(190, 100)
         btn_close.clicked.connect(self.close_win)
@@ -613,15 +613,12 @@ class ProgessBar(QDialog):
         self.task = HeavyTask(message_task_description)
         #connect to signals from the background threads to perform gui operations
         #such as updating the progress bar
-        self.task.begun.connect(lambda: self.edit_info.setText(self.task.description()))
+        self.task.begun.connect(lambda: self.edit_info.setText("Calculating..."))
         self.task.progressChanged.connect(lambda: self.prog.setValue(self.task.progress()))
+        self.task.progressChanged.connect(lambda: self.setProgressBarMessages(self.task.progress()))
         self.task.taskCompleted.connect(lambda: self.edit_info.setText('Complete'))
         self.task.taskTerminated.connect(self.TaskCancelled)
         QgsApplication.taskManager().addTask(self.task)
-
-
-    # def cancelTask(self):
-    #     self.task.cancel()
 
 
     def TaskCancelled(self):
@@ -631,3 +628,22 @@ class ProgessBar(QDialog):
 
     def close_win(self):
         self.close()
+
+
+    def setProgressBarMessages(self, val):
+    # --- Progress bar in the QGIS user messages (top)
+        if val <= 15:
+            message = "Starting..."
+            iface.messageBar().pushMessage(message)
+        elif val < 50:
+            message = "Calculating according to grades and weights..."
+            iface.messageBar().pushMessage(message)
+        elif val < 100:
+            message = "Preparing final raster..."
+            iface.messageBar().pushMessage(message)
+        elif val == 100:
+            iface.messageBar().clearWidgets()
+
+
+    # def cancelTask(self):
+    #     self.task.cancel()
