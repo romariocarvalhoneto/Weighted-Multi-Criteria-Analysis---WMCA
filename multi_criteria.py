@@ -417,15 +417,15 @@ class HeavyTask(QgsTask):
         
         #--- calculate a aprox size to put in the progress bar
         amount = len(arrayUso) * len(arrayUso[0])
-        div = self.div / amount    # max until this point - last point / len
-        prog = self.chunk
+        bit = self.div / amount    # max percentage until this point - last point / len
+        prog = self.chunk # self.chunk changes but self.div dont
         #-------------------
 
         for row in range(len(arrayUso)):
             for pixel in arrayUso[row]:
                 #--- calculate a aprox size to put in the progress bar
                 self.setProgress(prog)
-                prog += div
+                prog += bit
                 #-----------------------------------------------------
                 if pixel == MultiCriteria.noData: #keep the nodata in place
                     arrayNota[row].append(MultiCriteria.noData)
@@ -471,44 +471,43 @@ class HeavyTask(QgsTask):
         must return True or False and should only interact with the main thread
         via signals"""
         
-        cnt = 0
-        self.setProgress(cnt)
+        percent = 0
+        self.setProgress(percent)
        
         #------------------- Input and output of rasters ---------------------
         
         listaPesos_paraCalculos = [] #it needs to be inverted according to the way data is inserted
         
-        cnt = 0
+        percent = 0
         for raster in MultiCriteria.listaPesos:
             listaPesos_paraCalculos.insert(0, float(raster[0])) # gets only the grade, in float, for calculation
             #--- calculate a aprox size to put in the progress bar
             amount = len(MultiCriteria.listaPesos)
             div = 10 / amount    # max until this point / len
-            cnt += div
-            self.setProgress(cnt)
+            percent += div
+            self.setProgress(percent)
 
         listaCalculo = []  # list to have the grades of all rasters for calculation
         
-        cnt = 10
-        self.setProgress(cnt)
+        percent = 10
+        self.setProgress(percent)
         # ------ calls raster2arrayNotas() to have at last, a list of grade of each pixel by raster
 
         #--- calculate a aprox size to put in the progress bar  
         amount = len(MultiCriteria.listaLayersSelecionados)
-        self.div = (50-cnt) / amount   # max until this point - last point / len
-        self.chunk = self.div
+        self.div = (50-percent) / amount   # max until this point - last point / len
+        self.chunk = percent # beggins the point at 10% 
         #-------------------------------------------------------------
         cont = 0
         for layer in MultiCriteria.listaLayersSelecionados:   
-            self.setProgress(self.div)
             rasterPathCompleto = layer.source()
             pegandoNotas = self.raster2arrayNotas(rasterPathCompleto, MultiCriteria.listaNotas[cont])
             listaCalculo.append(pegandoNotas)
             cont += 1
-            self.chunk += self.div
+            self.chunk += self.div  #update the point where at
 
-        cnt = 50
-        self.setProgress(cnt)
+        percent = 50
+        self.setProgress(percent)
 
         # ------ list to have grade*weight of each pixel by raster
         listaCalculoCelula = [[ [] for row in raster] for raster in listaCalculo ] 
@@ -525,22 +524,22 @@ class HeavyTask(QgsTask):
                         calculoCelula = listaCalculo[raster][row][cel]*listaPesos_paraCalculos[raster]
                         listaCalculoCelula[raster][row].append(calculoCelula)
 
-        cnt = 60
-        self.setProgress(cnt)
+        percent = 60
+        self.setProgress(percent)
 
         # ----- preparing last array to bacame a raster
         arrayModelo = [[] for row in listaCalculoCelula[0]] #array model to build the output raster
 
         #--- calculate a aprox size to put in the progress bar
         amount = len(listaCalculoCelula) * len(listaCalculoCelula[0]) * len(listaCalculoCelula[0][0])
-        div = (90-60) / amount   # max until this point - last point / len
+        div = (90-percent) / amount   # max until this point - last point / len
         #-------------------------------------------------------------
         for raster in range(len(listaCalculoCelula)):
             for row in range(len(listaCalculoCelula[raster])):
                 for cel in range(len(listaCalculoCelula[raster][row])):
                     #---------
-                    cnt += div
-                    self.setProgress(cnt)
+                    percent += div
+                    self.setProgress(percent)
                     #---------
                     if raster == 0:
                         arrayModelo[row].append(listaCalculoCelula[raster][row][cel])
@@ -562,8 +561,8 @@ class HeavyTask(QgsTask):
                                 val = arrayModelo[row].pop(cel) # pop return the taken value
                                 arrayModelo[row].insert(cel,(val+listaCalculoCelula[raster][row][cel]))
         
-        cnt = 90
-        self.setProgress(cnt)
+        percent = 90
+        self.setProgress(percent)
 
         # ----------------------- Building final raster -------------------------------
 
@@ -571,8 +570,8 @@ class HeavyTask(QgsTask):
         self.rasterAvalicaoPath = MultiCriteria.adress
         self.array2raster(rasterModelPathCompleto,self.rasterAvalicaoPath,np.array(arrayModelo))
         
-        cnt = 100
-        self.setProgress(cnt)
+        percent = 100
+        self.setProgress(percent)
         return True
 
 
@@ -584,7 +583,7 @@ class HeavyTask(QgsTask):
         else:
             iface.messageBar().pushMessage('Task Complete')
             iface.addRasterLayer(self.rasterAvalicaoPath)
-            ProgessBar.btn_cancel.setEnabled(False)
+            #ProgessBar.btn_cancel.setEnabled(False)
 
 
 
@@ -604,9 +603,9 @@ class ProgessBar(QDialog):
         btn_close = QPushButton('Close',self)
         btn_close.move(190, 100)
         btn_close.clicked.connect(self.close_win)
-        ProgessBar.btn_cancel = QPushButton('Cancel Task', self)
-        ProgessBar.btn_cancel.move(40, 100)
-        ProgessBar.btn_cancel.clicked.connect(self.cancelTask)
+        # ProgessBar.btn_cancel = QPushButton('Cancel Task', self)
+        # ProgessBar.btn_cancel.move(40, 100)
+        # ProgessBar.btn_cancel.clicked.connect(self.cancelTask)
 
 
     def newTask(self, message_task_description):
@@ -621,8 +620,8 @@ class ProgessBar(QDialog):
         QgsApplication.taskManager().addTask(self.task)
 
 
-    def cancelTask(self):
-        self.task.cancel()
+    # def cancelTask(self):
+    #     self.task.cancel()
 
 
     def TaskCancelled(self):
