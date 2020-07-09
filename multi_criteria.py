@@ -336,13 +336,13 @@ class MultiCriteria:
         self.listaNoData = []
                 
         # Fetch the currently loaded layers                                          
-        layer_instance = QgsProject.instance()
-        layers = layer_instance.layerTreeRoot().children()          
+        # layer_instance = QgsProject.instance()
+        # layers = layer_instance.layerTreeRoot().children()          
         # Clear the contents of the comboBox from previous runs                      
-        self.dlg.mMapLayerComboBox.clear()                                 
-        # Populate the comboBox with names of all the loaded layers                  
-        self.listaNomeRasters = [layer.name() for layer in layers]
-        self.dlg.mMapLayerComboBox.addItems(self.listaNomeRasters)
+        # self.dlg.mMapLayerComboBox.clear()                                 
+        # # Populate the comboBox with names of all the loaded layers                  
+        # self.listaNomeRasters = [layer.name() for layer in layers]
+        # self.dlg.mMapLayerComboBox.addItems(self.listaNomeRasters)
         # list of rasters to update the layer to take its path
         MultiCriteria.listaLayersSelecionados = [] #list of selected layers
         self.listaAssert = [] #list to assert raster size
