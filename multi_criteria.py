@@ -61,7 +61,7 @@ class MultiCriteria:
         locale_path = os.path.join(
             self.plugin_dir,
             'i18n',
-            'MultiCriteria_{}.qm'.format(locale))
+            'multi_criteria_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -335,14 +335,6 @@ class MultiCriteria:
         
         self.listaNoData = []
                 
-        # Fetch the currently loaded layers                                          
-        # layer_instance = QgsProject.instance()
-        # layers = layer_instance.layerTreeRoot().children()          
-        # Clear the contents of the comboBox from previous runs                      
-        # self.dlg.mMapLayerComboBox.clear()                                 
-        # # Populate the comboBox with names of all the loaded layers                  
-        # self.listaNomeRasters = [layer.name() for layer in layers]
-        # self.dlg.mMapLayerComboBox.addItems(self.listaNomeRasters)
         # list of rasters to update the layer to take its path
         MultiCriteria.listaLayersSelecionados = [] #list of selected layers
         self.listaAssert = [] #list to assert raster size
@@ -579,10 +571,10 @@ class HeavyTask(QgsTask):
         """This function is called automatically when the task is completed and is
         called from the main thread so it is safe to interact with the GUI etc here"""
         if result is False:
-            iface.messageBar().pushMessage('Task was cancelled')
+            iface.messageBar().pushMessage(QCoreApplication.translate('Task message','Task was cancelled'))
         else:
             iface.addRasterLayer(self.rasterAvalicaoPath)
-            iface.messageBar().pushMessage('Complete')
+            iface.messageBar().pushMessage(QCoreApplication.translate('Task message','Complete'))
             #ProgessBar.btn_cancel.setEnabled(False)
 
 
@@ -599,8 +591,8 @@ class ProgessBar(QDialog):
         self.prog = QProgressBar(self)
         self.prog.resize(230, 30)
         self.prog.move(40, 55) 
-        self.newTask('Weighted Multi-Criteria Analysis - WMCA')
-        btn_close = QPushButton('Close',self)
+        self.newTask(QCoreApplication.translate('Task message','Weighted Multi-Criteria Analysis - WMCA'))
+        btn_close = QPushButton(QCoreApplication.translate('Task message','Close'),self)
         btn_close.move(190, 100)
         btn_close.clicked.connect(self.close_win)
         # ProgessBar.btn_cancel = QPushButton('Cancel Task', self)
@@ -613,17 +605,17 @@ class ProgessBar(QDialog):
         self.task = HeavyTask(message_task_description)
         #connect to signals from the background threads to perform gui operations
         #such as updating the progress bar
-        self.task.begun.connect(lambda: self.edit_info.setText("Calculating..."))
+        self.task.begun.connect(lambda: self.edit_info.setText(QCoreApplication.translate("Task message","Calculating...")))
         self.task.progressChanged.connect(lambda: self.prog.setValue(self.task.progress()))
         self.task.progressChanged.connect(lambda: self.setProgressBarMessages(self.task.progress()))
-        self.task.taskCompleted.connect(lambda: self.edit_info.setText('Complete'))
+        self.task.taskCompleted.connect(lambda: self.edit_info.setText(QCoreApplication.translate('Task message','Complete')))
         self.task.taskTerminated.connect(self.TaskCancelled)
         QgsApplication.taskManager().addTask(self.task)
 
 
     def TaskCancelled(self):
         self.prog.setValue(0)
-        self.edit_info.setText('Task Cancelled')
+        self.edit_info.setText(QCoreApplication.translate('Task message','Task Cancelled'))
 
 
     def close_win(self):
@@ -633,13 +625,13 @@ class ProgessBar(QDialog):
     def setProgressBarMessages(self, val):
     # --- Progress bar in the QGIS user messages (top)
         if val <= 15:
-            message = "Starting..."
+            message = QCoreApplication.translate("Task message","Starting...")
             iface.messageBar().pushMessage(message)
         elif val < 50:
-            message = "Calculating according to grades and weights..."
+            message = QCoreApplication.translate("Task message","Calculating according to grades and weights...")
             iface.messageBar().pushMessage(message)
         elif val < 100:
-            message = "Preparing final raster..."
+            message = QCoreApplication.translate("Task message","Preparing final raster...")
             iface.messageBar().pushMessage(message)
         elif val == 100:
             iface.messageBar().clearWidgets()

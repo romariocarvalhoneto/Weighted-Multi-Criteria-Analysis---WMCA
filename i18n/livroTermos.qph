@@ -248,4 +248,48 @@ p, li { white-space: pre-wrap; }
     <source>Select the output folder and the raster name</source>
     <target>Selecione a pasta de saída e o nome do raster</target>
 </phrase>
+<phrase>
+    <source></source>
+    <target></target>
+</phrase>
+<phrase>
+    <source>Task was cancelled</source>
+    <target>A tarefa (Task) foi cancelada</target>
+</phrase>
+<phrase>
+    <source>Complete</source>
+    <target>Completo</target>
+</phrase>
+<phrase>
+    <source>Weighted Multi-Criteria Analysis - WMCA</source>
+    <target>Análise Multicritério Ponderada – AMP</target>
+</phrase>
+<phrase>
+    <source>Close</source>
+    <target>Fechar</target>
+</phrase>
+<phrase>
+    <source>Calculating...</source>
+    <target>Calculando...</target>
+</phrase>
+<phrase>
+    <source>Task Cancelled</source>
+    <target>Cancelado</target>
+</phrase>
+<phrase>
+    <source>Starting...</source>
+    <target>Começando...</target>
+</phrase>
+<phrase>
+    <source>Calculating according to grades and weights...</source>
+    <target>Calculando conforme as notas e os pesos...</target>
+</phrase>
+<phrase>
+    <source>Preparing final raster...</source>
+    <target>Preparando o raster final...</target>
+</phrase>
+<phrase>
+    <source>The previous raster(s) has {} X cells and {} Y cells while this last raster &apos;{}&apos; has {} X cells and {} Y cells. They are not the same size. It will not be added to the Evaluation.</source>
+    <target>O raster anterior tem {} X pixel e {} Y pixel enquanto que o raster &apos;{}&apos; tem {} X pixel e {} Y pixel. Eles não tem o mesmo tamanho. Não será adicionado à avaliação.</target>
+</phrase>
 </QPH>

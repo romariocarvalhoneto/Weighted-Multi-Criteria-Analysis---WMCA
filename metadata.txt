@@ -6,7 +6,7 @@
 name=Weighted Multi-Criteria Analysis - WMCA
 qgisMinimumVersion=3.0
 description=Displays raster’s pixels values to the user, making possible to assign weights for each raster and grades for each class within each raster.
-version=0.3
+version=0.4
 author=Carvalho Neto, R.M. - UFSM and Benedetti, A.C.P. - UFSM
 email=romariocarvalho@hotmail.com
 
@@ -20,10 +20,10 @@ repository=https://github.com/romariocarvalhoneto/Weighted-Multi-Criteria-Analys
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=Added progress bar with QgsTask and changed window's size and fixed grade's table size.
+changelog=Corrected portuguese translation, translated progress bar and fixed issue with QGIS 3.14 not showing layers.
 
 # Tags are comma separated with spaces allowed
-tags=multi-criteria, environmental analyses, zoning, análise ambiental, multicritério, multicriteria, zoneamento, forestry
+tags=multi-criteria, environmental, analyses, zoning, análise, ambiental, multicritério, multicriteria, zoneamento, forestry
 
 homepage=https://github.com/romariocarvalhoneto/Weighted-Multi-Criteria-Analysis---WMCA
 category=Raster
@@ -40,7 +40,7 @@ deprecated=False
 # plugin_dependencies=
 
 Category of the plugin: Raster, Vector, Database or Web
-# category=
+category=Raster
 
 # If the plugin can run on QGIS Server.
 server=False
