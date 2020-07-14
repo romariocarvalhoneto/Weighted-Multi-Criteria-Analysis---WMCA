@@ -27,7 +27,7 @@ from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QTableWidget, QDialog, QProgressBar, QComboBox
 from PyQt5.QtWidgets import *
-from qgis.core import QgsProject, QgsTask, QgsApplication, Qgis
+from qgis.core import QgsProject, QgsTask, QgsApplication, Qgis, QgsMapLayerProxyModel#, QgsProviderRegistry
 from qgis.utils import iface
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -197,6 +197,10 @@ class MultiCriteria:
         """Selects the input for the evaluation and display on table"""
         row_number = 0
         column_number = 0
+
+        # excluded_providers = [p for p in QgsProviderRegistry.instance().providerList() if p not in ['gdal']]
+        # self.dlg.mMapLayerComboBox.setExcludedProviders(excluded_providers)
+        # self.dlg.mMapLayerComboBox.setFilters(QgsMapLayerProxyModel.RasterLayer)
         nomeRaster = self.dlg.mMapLayerComboBox.currentText()
         layer_selecionado = self.dlg.mMapLayerComboBox.currentLayer() # gets the selected layer
         if layer_selecionado == None:
@@ -333,6 +337,10 @@ class MultiCriteria:
             self.dlg = MultiCriteriaDialog()
             self.dlg.tabWidget.clear() #cleans the two tabs that came default
         
+        # excluded_providers = [p for p in QgsProviderRegistry.instance().providerList() if p not in ['gdal']]
+        # self.dlg.mMapLayerComboBox.setExcludedProviders(excluded_providers)
+        self.dlg.mMapLayerComboBox.setFilters(QgsMapLayerProxyModel.RasterLayer)
+
         self.listaNoData = []
                 
         # list of rasters to update the layer to take its path
