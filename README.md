@@ -5,3 +5,6 @@ Displays raster’s pixels values to the user, making possible to assign weights
 
 You can find 3 small rasters samples to use the Weighted Muilti-Criteria Analysis WMCA plugin at
 https://github.com/romariocarvalhoneto/Raster_WMCA_sample
+
+You can find a video in portuguese about the plugin at 
+https://www.youtube.com/watch?v=puboFOrqsks&t=24s
