@@ -2,7 +2,7 @@
 
 # Weighted-Multi-Criteria-Analysis---WMCA
 
-## Download und Installation vom alternativen Plugin-Repository
+## Download und Installation 
 
 Sie können das Plugin direkt aus dem gisma GitHub Repository [herunterladen](https://github.com/gisma/Weighted-Multi-Criteria-Analysis---WMCA/archive/refs/heads/master.zip). Hier ist die importzeile gefixed und das Widget vergrößert. 
 
