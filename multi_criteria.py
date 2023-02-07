@@ -35,8 +35,7 @@ from .resources import *
 from .multi_criteria_dialog import MultiCriteriaDialog
 import os.path
 # modules for the calculus
-from osgeo import gdal
-import osr
+from osgeo import gdal, osr
 import numpy as np
 import os # This is needed in the pyqgis console also
 
