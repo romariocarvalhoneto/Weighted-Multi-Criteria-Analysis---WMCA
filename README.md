@@ -8,3 +8,6 @@ https://github.com/romariocarvalhoneto/Raster_WMCA_sample
 
 You can find a video in portuguese about the plugin at 
 https://www.youtube.com/watch?v=puboFOrqsks&t=24s
+
+There is a document that explains its algorithm, math and how it was built at:
+https://repositorio.ufsm.br/handle/1/28666
